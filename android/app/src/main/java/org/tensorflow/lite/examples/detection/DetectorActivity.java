@@ -93,36 +93,16 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     private Matrix frameToCropTransform;
     private Matrix cropToFrameTransform;
 
-    private MultiBoxTracker tracker;
-
-    private byte[] luminanceCopy;
-
-    private BorderedText borderedText;
-
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
 
         distanceToast = new Toast(this);
-
-        final float textSizePx =
-                TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
-        borderedText = new BorderedText(textSizePx);
-        borderedText.setTypeface(Typeface.MONOSPACE);
-
-        tracker = new MultiBoxTracker(this);
 
         int cropSize = TF_OD_API_INPUT_SIZE;
 
         try {
             detector =
                     TFLiteFaceRecognitionAPIModel.create(getAssets());
-//                    TFLiteObjectDetectionAPIModel.create(
-//                            getAssets(),
-//                            TF_OD_API_MODEL_FILE,
-//                            TF_OD_API_LABELS_FILE,
-//                            TF_OD_API_INPUT_SIZE,
-//                            TF_OD_API_IS_QUANTIZED);
             cropSize = TF_OD_API_INPUT_SIZE;
         } catch (final IOException e) {
             e.printStackTrace();
@@ -138,9 +118,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         previewHeight = size.getHeight();
 
         sensorOrientation = rotation - getScreenOrientation();
-        LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
-
-        LOGGER.i("Initializing at size %dx%d", previewWidth, previewHeight);
         rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Config.ARGB_8888);
         croppedBitmap = Bitmap.createBitmap(cropSize, cropSize, Config.ARGB_8888);
 
@@ -152,18 +129,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
         cropToFrameTransform = new Matrix();
         frameToCropTransform.invert(cropToFrameTransform);
-
-        trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
-        trackingOverlay.addCallback(
-                new DrawCallback() {
-                    @Override
-                    public void drawCallback(final Canvas canvas) {
-                        tracker.draw(canvas);
-                        if (isDebug()) {
-                            tracker.drawDebug(canvas);
-                        }
-                    }
-                });
     }
 
     private void showDistance(String distance) {
@@ -179,15 +144,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     protected void processImage() {
         ++timestamp;
         final long currTimestamp = timestamp;
-        byte[] originalLuminance = getLuminance();
-        tracker.onFrame(
-                previewWidth,
-                previewHeight,
-                getLuminanceStride(),
-                sensorOrientation,
-                originalLuminance,
-                timestamp);
-        trackingOverlay.postInvalidate();
 
         // No mutex needed as this method is not reentrant.
         if (computingDetection) {
@@ -195,18 +151,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
             return;
         }
         computingDetection = true;
-        LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
 
         rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
 
-        if (luminanceCopy == null) {
-            luminanceCopy = new byte[originalLuminance.length];
-        }
-        System.arraycopy(originalLuminance, 0, luminanceCopy, 0, originalLuminance.length);
         readyForNextImage();
 
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
+        
         // For examining the actual TF input.
         if (SAVE_PREVIEW_BITMAP) {
             ImageUtils.saveBitmap(croppedBitmap);
@@ -284,21 +236,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                             mappedRecognitions.add(result);
                         }
                     }
-
-                    tracker.trackResults(mappedRecognitions, luminanceCopy, currTimestamp);
-                    trackingOverlay.postInvalidate();
-
                     computingDetection = false;
-
-                    runOnUiThread(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    showFrameInfo(previewWidth + "x" + previewHeight);
-                                    showCropInfo(cropCopyBitmap.getWidth() + "x" + cropCopyBitmap.getHeight());
-                                    showInference(lastProcessingTimeMs + "ms");
-                                }
-                            });
                 });
     }
 
