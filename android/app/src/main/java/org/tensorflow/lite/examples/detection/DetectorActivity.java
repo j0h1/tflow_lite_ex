@@ -158,7 +158,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
         final Canvas canvas = new Canvas(croppedBitmap);
         canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
-        
+
         // For examining the actual TF input.
         if (SAVE_PREVIEW_BITMAP) {
             ImageUtils.saveBitmap(croppedBitmap);
@@ -175,8 +175,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
         runInBackground(
                 () -> {
-                    LOGGER.i("Running detection on image " + currTimestamp);
-                    final long startTime = SystemClock.uptimeMillis();
                     final List<Classifier.Recognition> results = detector.recognizeImage(croppedBitmap);
 
                     showDistance(String.valueOf(((TFLiteFaceRecognitionAPIModel) detector).getDistance()));
@@ -187,21 +185,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 //
 //                    SparseArray<Face> detectedFace = faceDetector.detect(currentFrame);
 
-                    lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
-
                     cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
                     final Canvas canvas1 = new Canvas(cropCopyBitmap);
                     final Paint paint = new Paint();
                     paint.setColor(Color.RED);
                     paint.setStyle(Style.STROKE);
                     paint.setStrokeWidth(2.0f);
-
-                    float minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                    switch (MODE) {
-                        case TF_OD_API:
-                            minimumConfidence = MINIMUM_CONFIDENCE_TF_OD_API;
-                            break;
-                    }
 
                     final List<Classifier.Recognition> mappedRecognitions =
                             new LinkedList<Classifier.Recognition>();
@@ -227,7 +216,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                     for (final Classifier.Recognition result : results) {
                         final RectF location = result.getLocation();
-                        if (location != null && result.getConfidence() >= minimumConfidence) {
+                        if (location != null) {
                             canvas.drawRect(location, paint);
 
                             cropToFrameTransform.mapRect(location);
@@ -253,7 +242,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     // Which detection model to use: by default uses Tensorflow Object Detection API frozen
     // checkpoints.
     private enum DetectorMode {
-        TF_OD_API;
+        TF_OD_API
     }
 
     @Override
