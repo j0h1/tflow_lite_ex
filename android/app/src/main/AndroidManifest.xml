@@ -7,6 +7,10 @@
     <uses-feature android:name="android.hardware.camera.front" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
+    <meta-data
+        android:name="com.google.android.gms.vision.DEPENDENCIES"
+        android:value="face" />
+
     <application
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"

@@ -70,7 +70,7 @@ public abstract class CameraActivity extends AppCompatActivity
     private boolean debug = false;
     private Handler handler;
     private HandlerThread handlerThread;
-    private boolean useCamera2API;
+    private boolean useCamera2API = true;
     private boolean isProcessingFrame = false;
     private byte[][] yuvBytes = new byte[3][];
     private int[] rgbBytes = null;
@@ -414,11 +414,11 @@ public abstract class CameraActivity extends AppCompatActivity
                 // Fallback to camera1 API for internal cameras that don't have full support.
                 // This should help with legacy situations where using the camera2 API causes
                 // distorted or otherwise broken previews.
-                useCamera2API =
-                        (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                                || isHardwareLevelSupported(
-                                characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
-                LOGGER.i("Camera API lv2?: %s", useCamera2API);
+//                useCamera2API =
+//                        (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+//                                || isHardwareLevelSupported(
+//                                characteristics, CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
+//                LOGGER.i("Camera API lv2?: %s", useCamera2API);
                 return cameraId;
             }
         } catch (CameraAccessException e) {
